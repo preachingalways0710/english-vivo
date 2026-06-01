@@ -2,13 +2,13 @@
 /**
  * Plugin Name: English Vivo
  * Description: AI-powered English learning app for Brazilian Portuguese speakers. Sister app to Português Vivo. Renders via [english_vivo] shortcode.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Mike Schmidt / Anthropic
  */
 
 defined('ABSPATH') || exit;
 
-define('EV_VERSION', '1.0.0');
+define('EV_VERSION', '1.0.1');
 define('EV_URL', plugin_dir_url(__FILE__));
 
 add_action('wp_enqueue_scripts', function () {
@@ -56,17 +56,17 @@ add_shortcode('english_vivo', function () {
             <span>Passo 2 de 3 — Conectar IA</span>
           </div>
           <div class="card">
-            <p style="font-size:14px;line-height:1.7;margin-bottom:1rem">Para que a IA possa te ensinar, você precisará de uma chave gratuita do <strong>xAI Grok</strong>. É rápido e gratuito.</p>
+            <p style="font-size:14px;line-height:1.7;margin-bottom:1rem">Para que a IA possa te ensinar, você precisará de uma chave gratuita do <strong>Groq</strong>. É rápido e 100% gratuito.</p>
             <div style="background:var(--color-background-secondary);border-radius:8px;padding:12px;margin-bottom:1rem;font-size:13px;line-height:1.8">
               <div style="font-weight:500;margin-bottom:4px">Como obter sua chave:</div>
-              <div>1. Acesse <a href="https://console.x.ai" target="_blank" style="color:var(--color-text-info)">console.x.ai</a></div>
-              <div>2. Crie uma conta gratuita</div>
-              <div>3. Clique em <strong>API Keys → Create key</strong></div>
+              <div>1. Acesse <a href="https://console.groq.com/keys" target="_blank" style="color:var(--color-text-info)">console.groq.com/keys</a></div>
+              <div>2. Faça login (pode usar sua conta Google)</div>
+              <div>3. Clique em <strong>Create API Key</strong></div>
               <div>4. Copie a chave e cole abaixo</div>
             </div>
             <div style="margin-bottom:1.25rem">
-              <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px">Sua chave xAI</label>
-              <input id="ob-apikey" type="password" placeholder="xai-..." style="width:100%;border:0.5px solid var(--color-border-tertiary);border-radius:8px;padding:10px 12px;font-size:15px;font-family:inherit;background:var(--color-background-primary);color:#1a1a18">
+              <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px">Sua chave Groq</label>
+              <input id="ob-apikey" type="password" placeholder="gsk_..." style="width:100%;border:0.5px solid var(--color-border-tertiary);border-radius:8px;padding:10px 12px;font-size:15px;font-family:inherit;background:var(--color-background-primary);color:#1a1a18">
               <div style="font-size:12px;color:var(--color-text-secondary);margin-top:4px">Sua chave é armazenada apenas no seu dispositivo.</div>
             </div>
             <button class="btn btn-primary" style="width:100%" onclick="obStep2()">Verificar chave →</button>

@@ -103,10 +103,10 @@ async function obStep2(){
   err.style.display='none';
   if(!key){err.textContent='Cole sua chave.';err.style.display='block';return;}
   try{
-    const r=await fetch("https://api.x.ai/v1/chat/completions",{
+    const r=await fetch("https://api.groq.com/openai/v1/chat/completions",{
       method:"POST",
       headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
-      body:JSON.stringify({model:"grok-3-beta",max_tokens:5,messages:[{role:"user",content:"hi"}]})
+      body:JSON.stringify({model:"llama-3.3-70b-versatile",max_tokens:5,messages:[{role:"user",content:"hi"}]})
     });
     if(!r.ok)throw new Error('HTTP '+r.status);
     state.apiKey=key;await save();
@@ -172,18 +172,18 @@ function renderPlano(){
 }
 
 function aiCall(prompt,maxTokens=1000){
-  return fetch("https://api.x.ai/v1/chat/completions",{
+  return fetch("https://api.groq.com/openai/v1/chat/completions",{
     method:"POST",
     headers:{"Content-Type":"application/json","Authorization":"Bearer "+(state.apiKey||'')},
-    body:JSON.stringify({model:"grok-3-beta",max_tokens:maxTokens,messages:[{role:"user",content:prompt}]})
+    body:JSON.stringify({model:"llama-3.3-70b-versatile",max_tokens:maxTokens,messages:[{role:"user",content:prompt}]})
   }).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
     .then(d=>d.choices[0].message.content);
 }
 
 function aiChat(messages,system,maxTokens=300){
-  const body={model:"grok-3-beta",max_tokens:maxTokens,messages};
+  const body={model:"llama-3.3-70b-versatile",max_tokens:maxTokens,messages};
   if(system)body.messages=[{role:"system",content:system},...messages];
-  return fetch("https://api.x.ai/v1/chat/completions",{
+  return fetch("https://api.groq.com/openai/v1/chat/completions",{
     method:"POST",
     headers:{"Content-Type":"application/json","Authorization":"Bearer "+(state.apiKey||'')},
     body:JSON.stringify(body)
@@ -231,11 +231,11 @@ Return ONLY valid JSON, no markdown, no explanation:
   try{
     const controller=new AbortController();
     const timeout=setTimeout(()=>controller.abort(),12000);
-    const raw=await fetch("https://api.x.ai/v1/chat/completions",{
+    const raw=await fetch("https://api.groq.com/openai/v1/chat/completions",{
       method:"POST",
       headers:{"Content-Type":"application/json","Authorization":"Bearer "+(state.apiKey||'')},
       signal:controller.signal,
-      body:JSON.stringify({model:"grok-3-beta",max_tokens:2000,messages:[{role:"user",content:prompt}]})
+      body:JSON.stringify({model:"llama-3.3-70b-versatile",max_tokens:2000,messages:[{role:"user",content:prompt}]})
     });
     clearTimeout(timeout);
     if(!raw.ok)throw new Error('HTTP '+raw.status);
