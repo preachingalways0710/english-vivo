@@ -9,16 +9,22 @@ const STORIES=[
    text:`My name is João and I want to <span class="word-tip"><span class="tapped" onclick="saveWord('introduce','apresentar','I want to introduce my family')">introduce</span><span class="tooltip">apresentar</span></span> my family. I have a <span class="word-tip"><span class="tapped" onclick="saveWord('wife','esposa','my wife is a teacher')">wife</span><span class="tooltip">esposa</span></span> and two children.<br><br>My oldest <span class="word-tip"><span class="tapped" onclick="saveWord('daughter','filha','our daughter is ten')">daughter</span><span class="tooltip">filha</span></span> is ten years old. She likes to read and play with her friends. My <span class="word-tip"><span class="tapped" onclick="saveWord('son','filho','our son is seven')">son</span><span class="tooltip">filho</span></span> is seven. He loves soccer.<br><br>We live in a small house <span class="word-tip"><span class="tapped" onclick="saveWord('near','perto de','near the church')">near</span><span class="tooltip">perto de</span></span> the church. Every Sunday we go together. I'm <span class="word-tip"><span class="tapped" onclick="saveWord('grateful','grato','I am grateful for my family')">grateful</span><span class="tooltip">grato</span></span> for them.`}
 ];
 
-const TOPIC_PROMPTS={
-  articles:"You are a friendly English tutor teaching Brazilian Portuguese speakers. Explain English articles (a, an, the) in PORTUGUESE, with English examples. Cover the most common Brazilian mistakes (over-use or omission). Invite questions in Portuguese.",
-  to_be:"You are a friendly English tutor teaching Brazilian Portuguese speakers. Explain the verb 'to be' (am/is/are) in PORTUGUESE, contrasting with 'ser' and 'estar'. English examples. Invite questions.",
-  present_simple:"You are a friendly English tutor teaching Brazilian Portuguese speakers. Explain the present simple in PORTUGUESE — its uses (routine, facts) and the tricky third-person -s. English examples. Invite questions.",
-  past_simple:"You are a friendly English tutor teaching Brazilian Portuguese speakers. Explain the past simple in PORTUGUESE — regular -ed and the most common irregular verbs. English examples. Invite questions.",
-  prepositions:"You are a friendly English tutor teaching Brazilian Portuguese speakers. Explain commonly confused prepositions (in/on/at for time and place) in PORTUGUESE with English examples. Invite questions.",
-  plurals:"You are a friendly English tutor teaching Brazilian Portuguese speakers. Explain English plurals in PORTUGUESE — regular -s/-es and key irregulars (man/men, child/children, etc). Invite questions.",
-  questions:"You are a friendly English tutor teaching Brazilian Portuguese speakers. Explain how to form English questions in PORTUGUESE — do/does/did and wh- words. Show how it differs from Portuguese. Invite questions.",
-  false_cognates:"You are a friendly English tutor teaching Brazilian Portuguese speakers. Teach 6-8 of the most dangerous false cognates between Portuguese and English (pretend/pretender, push/puxar, library/livraria, parents/parentes, actually/atualmente, realize/realizar, college/colégio, fabric/fábrica). Explain in PORTUGUESE with English examples. Invite questions."
-};
+function tutorLang(){return state.uiLang==='en'?'ENGLISH':'PORTUGUESE';}
+function topicPrompt(key){
+  const L=tutorLang();
+  const inviteIn=state.uiLang==='en'?'Invite questions in English.':'Invite questions in Portuguese.';
+  const T={
+    articles:`You are a friendly English tutor teaching Brazilian Portuguese speakers. Explain English articles (a, an, the) in ${L}, with English examples. Cover the most common Brazilian mistakes (over-use or omission). ${inviteIn}`,
+    to_be:`You are a friendly English tutor teaching Brazilian Portuguese speakers. Explain the verb 'to be' (am/is/are) in ${L}, contrasting with 'ser' and 'estar'. English examples. ${inviteIn}`,
+    present_simple:`You are a friendly English tutor teaching Brazilian Portuguese speakers. Explain the present simple in ${L} — its uses (routine, facts) and the tricky third-person -s. English examples. ${inviteIn}`,
+    past_simple:`You are a friendly English tutor teaching Brazilian Portuguese speakers. Explain the past simple in ${L} — regular -ed and the most common irregular verbs. English examples. ${inviteIn}`,
+    prepositions:`You are a friendly English tutor teaching Brazilian Portuguese speakers. Explain commonly confused prepositions (in/on/at for time and place) in ${L} with English examples. ${inviteIn}`,
+    plurals:`You are a friendly English tutor teaching Brazilian Portuguese speakers. Explain English plurals in ${L} — regular -s/-es and key irregulars (man/men, child/children, etc). ${inviteIn}`,
+    questions:`You are a friendly English tutor teaching Brazilian Portuguese speakers. Explain how to form English questions in ${L} — do/does/did and wh- words. Show how it differs from Portuguese. ${inviteIn}`,
+    false_cognates:`You are a friendly English tutor teaching Brazilian Portuguese speakers. Teach 6-8 of the most dangerous false cognates between Portuguese and English (pretend/pretender, push/puxar, library/livraria, parents/parentes, actually/atualmente, realize/realizar, college/colégio, fabric/fábrica). Explain in ${L} with English examples. ${inviteIn}`
+  };
+  return T[key];
+}
 
 const CEFR_ORDER=['A1','A2','B1','B2','C1','C2'];
 const MILESTONE_THEMES={
@@ -34,8 +40,138 @@ let state={
   savedWords:[],storiesRead:[],points:0,examResult:null,apiKey:null,name:null,email:null,
   plan:null,currentMilestoneIdx:0,stagesDone:{},
   expChatHistory:[],expChatStory:null,expDebateHistory:[],expDebateTopic:null,
-  expTopicHistory:[],expCurrentTopic:null
+  expTopicHistory:[],expCurrentTopic:null,
+  uiLang:'pt',uiLangManual:false,langTransitionShown:false
 };
+
+// ── I18N ───────────────────────────────────────────────────
+// PT-as-key dictionary. Strings not found fall through unchanged (graceful degradation).
+const UI_LANG_THRESHOLD='B1';
+const STRINGS={
+  // nav & top bar
+  'O Plano':'The Plan','Explorar':'Explore','→ Fluente':'→ Fluent','para':'to',
+  // plano (no exam / generating)
+  'Comece pelo exame':'Start with the exam',
+  'O plano é gerado com base no seu nível. Faça o exame de nivelamento primeiro.':'Your plan is generated based on your level. Take the placement exam first.',
+  'Fazer o exame →':'Take the exam →','Gerando seu plano...':'Generating your plan...',
+  'Criando milestones para o nível':'Creating milestones for level',
+  // exam
+  'Exame de Nivelamento':'Placement Exam',
+  'Três fases · ~10 minutos · A IA determina seu nível':'Three phases · ~10 minutes · The AI determines your level',
+  'Este exame avalia seu inglês em leitura, escrita livre e gramática. Ao final você recebe um nível CEFR (A1 a C2) e seu plano de estudos é gerado automaticamente.':'This exam evaluates your English in reading, free writing, and grammar. At the end you receive a CEFR level (A1 to C2) and your study plan is generated automatically.',
+  'Começar →':'Start →','Último resultado':'Last result','Refazer exame':'Retake exam',
+  '← Voltar':'← Back','Avaliando suas respostas...':'Grading your answers...',
+  'Seu nível CEFR':'Your CEFR level','Ver meu plano →':'See my plan →',
+  'Fase 1 de 3':'Phase 1 of 3','Fase 2 de 3':'Phase 2 of 3','Fase 3 de 3':'Phase 3 of 3',
+  'Compreensão de leitura':'Reading comprehension','Escrita livre (em inglês)':'Free writing',
+  'Consciência gramatical':'Grammatical awareness','Próxima fase →':'Next phase →',
+  'Leia o texto em inglês e responda as perguntas em português.':'Read the English text and answer the questions.',
+  'Responda em português...':'Type your answer...',
+  'Escreva em inglês. Tudo bem se for básico — escreva o que conseguir.':'Write in English.',
+  'Write in English...':'Write in English...',
+  'Escolha a opção correta em inglês.':'Choose the correct option.',
+  'Ver resultado →':'See result →','Responda todas as perguntas.':'Answer all the questions.',
+  'Escreva as duas respostas (mesmo que seja inglês básico).':'Write both answers.',
+  'Responda todos os itens.':'Answer all items.',
+  'Leitura':'Reading','Escrita':'Writing','Gramática':'Grammar',
+  // milestone road
+  'Concluído':'Completed','Em progresso':'In progress','Bloqueado':'Locked','Agora':'Now',
+  'Vocabulário':'Vocabulary','Conversa':'Conversation','Debate':'Debate',
+  'Texto curto em inglês + perguntas de compreensão':'Short English text + comprehension questions',
+  '5 palavras em contexto + resposta escrita em inglês':'5 words in context + written response in English',
+  '4+ trocas com um personagem (em inglês)':'4+ exchanges with a character (in English)',
+  'Ponto gramatical chave para este nível':'Key grammar point for this level',
+  'Debate em inglês relacionado ao tema':'Debate in English related to the theme',
+  'Texto curto + perguntas':'Short text + questions','5 palavras em contexto':'5 words in context',
+  '4+ trocas em inglês':'4+ exchanges in English','Ponto gramatical':'Grammar point',
+  'Debate do tema':'Theme debate','4 milestones · 20 estágios no total':'4 milestones · 20 stages total',
+  // lesson
+  'Milestone':'Milestone','Estágio':'Stage','Gerando conteúdo...':'Generating content...',
+  'Erro ao gerar conteúdo.':'Error generating content.','Tentar novamente':'Try again',
+  'Leia o texto em inglês. Toque nas palavras destacadas. Quando terminar, esconda e responda.':'Read the English text. Tap the highlighted words. When done, hide it and answer.',
+  'Pronto →':'Done →','Responda em português, sem olhar o texto.':'Answer without looking at the text.',
+  'Verificar →':'Check →','Pergunta':'Question','Próximo estágio →':'Next stage →',
+  'Avaliando...':'Grading...','Escreva sua resposta em inglês.':'Write your answer in English.',
+  'Erro.':'Error.','Complete pelo menos 4 trocas (em inglês) para desbloquear o próximo estágio.':'Complete at least 4 exchanges (in English) to unlock the next stage.',
+  'Reply in English...':'Reply in English...','Avaliar conversa →':'Grade conversation →',
+  'Argue in English...':'Argue in English...','Avaliar debate →':'Grade debate →',
+  'Destaque':'Highlight','Próximo foco':'Next focus','Concluir milestone →':'Finish milestone →',
+  'Continuar →':'Continue →','Milestone concluído!':'Milestone completed!',
+  'O próximo milestone está desbloqueado.':'The next milestone is unlocked.',
+  'Você completou todo o plano!':'You completed the entire plan!','Ver o plano →':'See the plan →',
+  // explorar
+  'Histórias':'Stories','Leitura em inglês com tradução':'English reading with translation',
+  'A IA joga contra você (em inglês)':'The AI plays against you (in English)',
+  'Pergunte o que quiser':'Ask whatever you want','Palavras salvas':'Saved words',
+  'Igreja':'Church','Cotidiano':'Daily life','Família':'Family','+ Nova':'+ New',
+  'Gerar nova história':'Generate new story','A IA cria para você':'The AI creates for you',
+  'Leia. Toque nas palavras destacadas para ver a tradução.':'Read. Tap the highlighted words for translation.',
+  'Conversar (em inglês) →':'Chat (in English) →','Outra história':'Another story',
+  '← História':'← Story','Responda em inglês...':'Reply in English...','← Explorar':'← Explore',
+  'A IA defende o lado oposto. Argumente em inglês.':'The AI takes the opposite side. Argue in English.',
+  'Ou escreva seu tema (em inglês)...':'Or write your own topic...',
+  'Argumente em inglês...':'Argue in English...','Artigos':'Articles','Verbo to be':'Verb to be',
+  'Presente simples':'Present simple','rotina e fatos':'routine and facts',
+  'Passado simples':'Past simple','ontem, na semana passada':'yesterday, last week',
+  'Preposições':'Prepositions','Plurais':'Plurals','-s, -es, irregulares':'-s, -es, irregulars',
+  'Perguntas':'Questions','Falsos cognatos':'False cognates',
+  '← Tópicos':'← Topics','Pergunte algo (em português)...':'Ask anything...',
+  'Vocabulário salvo':'Saved vocabulary',
+  'Nenhuma palavra salva. Toque nas palavras destacadas durante a leitura.':'No words saved. Tap highlighted words while reading.',
+  'Gerando...':'Generating...','Erro. Tente novamente.':'Error. Try again.',
+  'Ouvindo...':'Listening...','Feito em':'Taken on',
+  // settings/toggle
+  'Mudar para inglês':'Switch to Portuguese','Mudar para português':'Switch to Portuguese',
+  '🇺🇸 EN':'🇺🇸 EN','🇧🇷 PT':'🇧🇷 PT',
+  // celebration
+  'Você chegou ao B1!':'You reached B1!',
+  'A partir de agora, o app fala inglês com você. Você pode voltar pro português a qualquer momento no canto superior direito.':'From now on, the app speaks English with you. You can switch back to Portuguese any time using the toggle in the top right.',
+  'Vamos lá →':"Let's go →"
+};
+function t(s){return state.uiLang==='en'&&STRINGS[s]?STRINGS[s]:s;}
+function applyI18n(){
+  document.querySelectorAll('.ev-root [data-i18n]').forEach(el=>{
+    const k=el.getAttribute('data-i18n');el.textContent=t(k);
+  });
+  document.querySelectorAll('.ev-root [data-i18n-ph]').forEach(el=>{
+    const k=el.getAttribute('data-i18n-ph');el.placeholder=t(k);
+  });
+  // language toggle button label
+  const tog=document.getElementById('lang-toggle');
+  if(tog)tog.textContent=state.uiLang==='en'?t('🇺🇸 EN'):t('🇧🇷 PT');
+}
+function checkLanguageThreshold(){
+  if(!state.examResult)return;
+  if(state.uiLangManual)return; // user took control; don't auto-flip
+  const idx=CEFR_ORDER.indexOf(state.examResult.level);
+  const thrIdx=CEFR_ORDER.indexOf(UI_LANG_THRESHOLD);
+  const target=idx>=thrIdx?'en':'pt';
+  if(state.uiLang!==target){
+    state.uiLang=target;
+    if(target==='en'&&!state.langTransitionShown){
+      state.langTransitionShown=true;save();showLangCelebration();return;
+    }
+    save();
+  }
+}
+function showLangCelebration(){
+  const root=document.querySelector('.ev-root');if(!root)return;
+  const overlay=document.createElement('div');
+  overlay.id='lang-celebration';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:9999;padding:1rem';
+  overlay.innerHTML=`<div class="card" style="max-width:420px;text-align:center;background:#fff">
+    <div style="font-size:48px;margin-bottom:.75rem">🎉</div>
+    <div style="font-size:22px;font-weight:500;margin-bottom:.5rem">Você chegou ao B1!</div>
+    <p style="font-size:14px;line-height:1.7;color:var(--color-text-secondary);margin-bottom:1.25rem">A partir de agora, o app fala inglês com você. Você pode voltar pro português a qualquer momento no canto superior direito.</p>
+    <button class="btn btn-primary" onclick="document.getElementById('lang-celebration').remove();applyI18n();renderPlano();updateLevelWidget();">Vamos lá →</button>
+  </div>`;
+  root.appendChild(overlay);
+}
+function toggleUiLang(){
+  state.uiLang=state.uiLang==='en'?'pt':'en';
+  state.uiLangManual=true;save();
+  applyI18n();updateLevelWidget();renderPlano();
+}
 
 const synth=window.speechSynthesis;
 let enVoice=null;
@@ -54,7 +190,7 @@ function mkMicToggle(btnId,inputId,statusId){
     recog.onend=()=>{active=false;const b=document.getElementById(btnId);if(b){b.textContent='🎤';b.classList.remove('recording');}document.getElementById(statusId).textContent='';};
     recog.start();active=true;
     document.getElementById(btnId).textContent='⏹';document.getElementById(btnId).classList.add('recording');
-    document.getElementById(statusId).textContent='Ouvindo...';
+    document.getElementById(statusId).textContent=t('Ouvindo...');
   };
 }
 let toggleExpMic,toggleExpDebateMic;
@@ -77,11 +213,13 @@ async function loadState(){
   }
   document.getElementById('onboarding').style.display='none';
   document.getElementById('main-app').style.display='block';
+  checkLanguageThreshold();
+  applyI18n();
   updateLevelWidget();
   if(state.examResult){
     document.getElementById('exam-prev').style.display='block';
     document.getElementById('exam-prev-level').textContent=state.examResult.level+' — '+state.examResult.label;
-    document.getElementById('exam-prev-date').textContent='Feito em '+state.examResult.date;
+    document.getElementById('exam-prev-date').textContent=t('Feito em')+' '+state.examResult.date;
   }
   renderPlano();
 }
@@ -135,9 +273,9 @@ function updateLevelWidget(){
   const pct=Math.min(98,Math.max(2,Math.round((state.points-cur)/(nxt-cur)*100)));
   document.getElementById('level-widget').style.display='flex';
   document.getElementById('lw-level').textContent=lvl;
-  document.getElementById('lw-arrow').textContent=next?'→ '+next:'→ Fluente';
+  document.getElementById('lw-arrow').textContent=next?'→ '+next:t('→ Fluente');
   document.getElementById('lw-bar').style.width=pct+'%';
-  document.getElementById('lw-pct').textContent=pct+'% para '+(next||'C2');
+  document.getElementById('lw-pct').textContent=pct+'% '+t('para')+' '+(next||'C2');
 }
 
 function showSection(id){
@@ -282,7 +420,7 @@ function renderRoad(){
     const circleClass=allDone?'done-c':isActive?'active':'';
     const circleContent=allDone?'✓':mi+1;
     const badgeClass=allDone?'mb-done':isActive?'mb-active':'mb-locked';
-    const badgeText=allDone?'Concluído':isActive?'Em progresso':'Bloqueado';
+    const badgeText=allDone?t('Concluído'):isActive?t('Em progresso'):t('Bloqueado');
     hdr.innerHTML=`<div class="milestone-circle ${circleClass}">${circleContent}</div><div class="milestone-info"><div class="milestone-title">${m.title}</div><div class="milestone-sub">${m.focus}</div></div><span class="milestone-badge ${badgeClass}">${badgeText}</span>`;
     block.appendChild(hdr);
     if(isActive){
@@ -298,8 +436,8 @@ function renderRoad(){
         const icons={reading:'📖',vocab:'💡',chat:'💬',grammar:'✏️',debate:'⚔️'};
         const iconClass=sDone?'s-done':sActive?'s-active':'';
         const chipClass=sDone?'sc-done':sActive?'sc-active':'sc-locked';
-        const chipText=sDone?'✓':sActive?'Agora':'';
-        row.innerHTML=`<div class="stage-icon ${iconClass}">${sDone?'✓':icons[s.type]||si+1}</div><div class="stage-info"><div class="stage-name">${s.name}</div><div class="stage-desc">${s.desc}</div></div>${chipText?`<span class="stage-chip ${chipClass}">${chipText}</span>`:''}`;
+        const chipText=sDone?'✓':sActive?t('Agora'):'';
+        row.innerHTML=`<div class="stage-icon ${iconClass}">${sDone?'✓':icons[s.type]||si+1}</div><div class="stage-info"><div class="stage-name">${t(s.name)}</div><div class="stage-desc">${t(s.desc)}</div></div>${chipText?`<span class="stage-chip ${chipClass}">${chipText}</span>`:''}`;
         if(!sLocked&&!sDone)row.onclick=()=>openLesson(mi,si);
         panel.appendChild(row);
       });
@@ -318,7 +456,7 @@ async function openLesson(mi,si){
   document.getElementById('plano-main').style.display='none';
   const lc=document.getElementById('lesson-container');
   lc.style.display='block';
-  lc.innerHTML=`<button class="btn btn-sm" onclick="backToRoad()" style="margin-bottom:1rem">← O Plano</button><div style="font-size:13px;color:var(--color-text-secondary);margin-bottom:4px">Milestone ${mi+1} · Estágio ${si+1}</div><div style="font-size:18px;font-weight:500;margin-bottom:1.25rem">${stage.name}</div><div id="lesson-body"><div style="text-align:center;padding:2rem;color:var(--color-text-secondary)">Gerando conteúdo...</div></div>`;
+  lc.innerHTML=`<button class="btn btn-sm" onclick="backToRoad()" style="margin-bottom:1rem">← ${t('O Plano')}</button><div style="font-size:13px;color:var(--color-text-secondary);margin-bottom:4px">${t('Milestone')} ${mi+1} · ${t('Estágio')} ${si+1}</div><div style="font-size:18px;font-weight:500;margin-bottom:1.25rem">${t(stage.name)}</div><div id="lesson-body"><div style="text-align:center;padding:2rem;color:var(--color-text-secondary)">${t('Gerando conteúdo...')}</div></div>`;
   await generateLessonContent(stage,mi,si);
 }
 
@@ -332,21 +470,23 @@ async function generateLessonContent(stage,mi,si){
   const lvl=state.examResult.level;
   const theme=state.plan.milestones[mi].title;
   let prompt='';
+  const L=tutorLang();
   if(stage.type==='reading'){
     prompt=`Generate an English reading comprehension lesson for a ${lvl} Brazilian learner of English. Theme: "${theme}". Context: Brazilian church member in Rondônia, possibly meeting Americans or using English at work.
-The STORY must be in ENGLISH (level-appropriate). The QUESTIONS must be in PORTUGUESE (so the learner can show understanding without struggling to write English).
-Return ONLY JSON: {"story":"~120-150 word English story with 4 vocab words wrapped as <span class=\\"word-tip\\"><span class=\\"tapped\\" onclick=\\"saveWord('w','pt-translation','english-context')\\">w</span><span class=\\"tooltip\\">pt-translation</span></span>","questions":["Question in Portuguese?","Second question in Portuguese?"]}`;
+The STORY must be in ENGLISH (level-appropriate). The QUESTIONS must be in ${L} (so the learner can show understanding without struggling to write English).
+Return ONLY JSON: {"story":"~120-150 word English story with 4 vocab words wrapped as <span class=\\"word-tip\\"><span class=\\"tapped\\" onclick=\\"saveWord('w','pt-translation','english-context')\\">w</span><span class=\\"tooltip\\">pt-translation</span></span>","questions":["Question in ${L}?","Second question in ${L}?"]}`;
   }else if(stage.type==='vocab'){
+    const wp=state.uiLang==='en'?'Write 3-4 sentences in English using at least 3 of these words.':'Escreva 3-4 frases em inglês usando pelo menos 3 dessas palavras.';
     prompt=`Generate an English vocabulary lesson for a ${lvl} Brazilian learner. Theme: "${theme}". 5 contextual English words relevant to the theme.
-Return ONLY JSON: {"words":[{"en":"...","pt":"...","example":"English sentence using the word"},{"en":"...","pt":"...","example":"..."},{"en":"...","pt":"...","example":"..."},{"en":"...","pt":"...","example":"..."},{"en":"...","pt":"...","example":"..."}],"writing_prompt":"Escreva 3-4 frases em inglês usando pelo menos 3 dessas palavras."}`;
+Return ONLY JSON: {"words":[{"en":"...","pt":"...","example":"English sentence using the word"},{"en":"...","pt":"...","example":"..."},{"en":"...","pt":"...","example":"..."},{"en":"...","pt":"...","example":"..."},{"en":"...","pt":"...","example":"..."}],"writing_prompt":"${wp}"}`;
   }else if(stage.type==='chat'){
     prompt=`Generate a guided English conversation lesson for a ${lvl} Brazilian learner. Theme: "${theme}". Context: Brazilian church / community in Rondônia.
 The character speaks ENGLISH only. Scenario can be described in English (will be shown as subtitle).
 Return ONLY JSON: {"character":"Name","scenario":"One sentence scenario (English, ${lvl}-appropriate)","opening":"Character's opening line in ENGLISH"}`;
   }else if(stage.type==='grammar'){
     prompt=`Generate an English grammar lesson for a ${lvl} Brazilian learner focused on a key English grammar point for this level (think: articles, to be, present simple, past simple, prepositions, plurals, question formation, false cognates). Theme: "${theme}".
-The explanation must be in PORTUGUESE. The example sentences and exercises must be in ENGLISH.
-Return ONLY JSON: {"topic":"Grammar topic name in Portuguese","explanation":"3-4 sentence explanation in PORTUGUESE with English examples","exercises":[{"prompt":"Fill in the blank: English sentence with a ___ blank","answer":"correct English answer","options":["opt1","opt2","opt3","opt4"]},{"prompt":"...","answer":"...","options":["...","...","...","..."]},{"prompt":"...","answer":"...","options":["...","...","...","..."]}]}`;
+The explanation must be in ${L}. The example sentences and exercises must be in ENGLISH.
+Return ONLY JSON: {"topic":"Grammar topic name in ${L}","explanation":"3-4 sentence explanation in ${L} with English examples","exercises":[{"prompt":"Fill in the blank: English sentence with a ___ blank","answer":"correct English answer","options":["opt1","opt2","opt3","opt4"]},{"prompt":"...","answer":"...","options":["...","...","...","..."]},{"prompt":"...","answer":"...","options":["...","...","...","..."]}]}`;
   }else if(stage.type==='debate'){
     prompt=`Generate an English debate lesson for a ${lvl} Brazilian learner. Theme: "${theme}". Relevant to a Christian Brazilian context.
 Return ONLY JSON: {"topic":"Debate topic in English","opening":"AI's opening argument in English (2-3 sentences, will argue opposite of learner)"}`;
@@ -356,7 +496,7 @@ Return ONLY JSON: {"topic":"Debate topic in English","opening":"AI's opening arg
     const content=extractJSON(raw);
     if(!content)throw new Error('parse');
     renderLessonContent(stage,content,mi,si);
-  }catch(e){document.getElementById('lesson-body').innerHTML=`<p style="color:#e24b4a">Erro ao gerar conteúdo.</p><button class="btn btn-sm" style="margin-top:.75rem" onclick="generateLessonContent(state.plan.milestones[${mi}].stages[${si}],${mi},${si})">Tentar novamente</button>`;}
+  }catch(e){document.getElementById('lesson-body').innerHTML=`<p style="color:#e24b4a">${t('Erro ao gerar conteúdo.')}</p><button class="btn btn-sm" style="margin-top:.75rem" onclick="generateLessonContent(state.plan.milestones[${mi}].stages[${si}],${mi},${si})">${t('Tentar novamente')}</button>`;}
 }
 
 function renderLessonContent(stage,content,mi,si){
@@ -364,15 +504,15 @@ function renderLessonContent(stage,content,mi,si){
   if(stage.type==='reading'){
     body.innerHTML=`<div id="read-phase">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem">
-        <p style="font-size:13px;color:var(--color-text-secondary)">Leia o texto em inglês. Toque nas palavras destacadas. Quando terminar, esconda e responda.</p>
-        <button class="btn btn-sm" onclick="hideReadingText()">Pronto →</button>
+        <p style="font-size:13px;color:var(--color-text-secondary)">${t('Leia o texto em inglês. Toque nas palavras destacadas. Quando terminar, esconda e responda.')}</p>
+        <button class="btn btn-sm" onclick="hideReadingText()">${t('Pronto →')}</button>
       </div>
       <div class="card" style="background:var(--color-background-secondary);border:none"><div class="story-text" style="font-size:15px">${content.story}</div></div>
     </div>
     <div id="q-phase" style="display:none">
-      <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:1.25rem">Responda em português, sem olhar o texto.</p>
-      ${content.questions.map((q,i)=>`<div style="margin-bottom:1rem"><div style="font-size:14px;font-weight:500;margin-bottom:6px">${i+1}. ${q}</div><textarea class="cans" rows="2" style="width:100%;border:0.5px solid var(--color-border-tertiary);border-radius:8px;padding:10px;font-size:14px;font-family:inherit;background:var(--color-background-primary);color:#1a1a18" placeholder="Responda em português..."></textarea></div>`).join('')}
-      <button class="btn btn-primary" onclick="submitReading(${JSON.stringify(content).replace(/"/g,'&quot;')},${mi},${si})">Verificar →</button>
+      <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:1.25rem">${t('Responda em português, sem olhar o texto.')}</p>
+      ${content.questions.map((q,i)=>`<div style="margin-bottom:1rem"><div style="font-size:14px;font-weight:500;margin-bottom:6px">${i+1}. ${q}</div><textarea class="cans" rows="2" style="width:100%;border:0.5px solid var(--color-border-tertiary);border-radius:8px;padding:10px;font-size:14px;font-family:inherit;background:var(--color-background-primary);color:#1a1a18" placeholder="${t('Responda em português...')}"></textarea></div>`).join('')}
+      <button class="btn btn-primary" onclick="submitReading(${JSON.stringify(content).replace(/"/g,'&quot;')},${mi},${si})">${t('Verificar →')}</button>
       <div id="read-fb" style="margin-top:1rem"></div>
     </div>`;
     bindTooltips();
@@ -380,12 +520,12 @@ function renderLessonContent(stage,content,mi,si){
     body.innerHTML=`${content.words.map(w=>`<div class="card" style="padding:1rem;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-size:15px;font-weight:500">${w.en}</div><div style="font-size:13px;color:var(--color-text-secondary);margin-top:2px;font-style:italic">${w.example}</div></div><div style="font-size:13px;color:var(--color-text-secondary)">${w.pt}</div></div>`).join('')}
     <div style="font-size:14px;font-weight:500;margin-bottom:8px;margin-top:.5rem">${content.writing_prompt}</div>
     <textarea id="vocab-resp" rows="5" style="width:100%;border:0.5px solid var(--color-border-tertiary);border-radius:8px;padding:10px;font-size:15px;font-family:inherit;background:var(--color-background-primary);color:#1a1a18;margin-bottom:1rem" placeholder="Write here in English..."></textarea>
-    <button class="btn btn-primary" onclick="submitVocab(${JSON.stringify(content).replace(/"/g,'&quot;')},${mi},${si})">Enviar →</button>
+    <button class="btn btn-primary" onclick="submitVocab(${JSON.stringify(content).replace(/"/g,'&quot;')},${mi},${si})">${t('Verificar →')}</button>
     <div id="vocab-fb" style="margin-top:1rem"></div>`;
     content.words.forEach(w=>saveWord(w.en,w.pt,w.example));
   }else if(stage.type==='chat'){
     lessonCtx.chatHistory=[{role:'assistant',content:content.opening}];
-    body.innerHTML=`<p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:1rem">Complete pelo menos 4 trocas (em inglês) para desbloquear o próximo estágio.</p>
+    body.innerHTML=`<p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:1rem">${t('Complete pelo menos 4 trocas (em inglês) para desbloquear o próximo estágio.')}</p>
     <div class="chat-wrap">
       <div class="chat-header"><strong>${content.character}</strong><p>${content.scenario}</p></div>
       <div class="messages" id="lc-msgs"></div>
@@ -396,7 +536,7 @@ function renderLessonContent(stage,content,mi,si){
         <button class="btn btn-primary btn-icon" onclick="sendLcChat(${JSON.stringify(content).replace(/"/g,'&quot;')})">→</button>
       </div>
     </div>
-    <div id="lc-grade-btn" style="display:none;margin-top:.5rem"><button class="btn btn-primary" onclick="gradeLcChat(${mi},${si})">Avaliar conversa →</button></div>
+    <div id="lc-grade-btn" style="display:none;margin-top:.5rem"><button class="btn btn-primary" onclick="gradeLcChat(${mi},${si})">${t('Avaliar conversa →')}</button></div>
     <div id="lc-fb" style="margin-top:1rem"></div>`;
     addLcMsg(content.opening,'ai',true);
     document.getElementById('lc-input').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendLcChat(content);}});
@@ -405,7 +545,7 @@ function renderLessonContent(stage,content,mi,si){
     lessonCtx.grammarPicked={};
     body.innerHTML=`<div class="card" style="background:var(--color-background-secondary);border:none;margin-bottom:1.25rem"><div style="font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-secondary);margin-bottom:6px">${content.topic}</div><p style="font-size:14px;line-height:1.7">${content.explanation}</p></div>
     ${content.exercises.map((ex,i)=>`<div style="margin-bottom:1.25rem"><div style="font-size:14px;margin-bottom:8px">${i+1}. ${ex.prompt}</div><div style="display:flex;gap:6px;flex-wrap:wrap">${ex.options.map(o=>`<button class="btn btn-sm" id="gp_${i}_${o.replace(/[\s']/g,'_')}" onclick="pickGr(${i},'${o.replace(/'/g,"\\'")}','${ex.answer.replace(/'/g,"\\'")}',this,${JSON.stringify(content.exercises.length)})">${o}</button>`).join('')}</div><div id="gfb_${i}" style="font-size:13px;margin-top:5px;min-height:18px"></div></div>`).join('')}
-    <div id="gr-next" style="display:none"><button class="btn btn-primary" onclick="completeLesson(${mi},${si},15,'gramática')">Próximo estágio →</button></div>`;
+    <div id="gr-next" style="display:none"><button class="btn btn-primary" onclick="completeLesson(${mi},${si},15,'gramática')">${t('Próximo estágio →')}</button></div>`;
   }else if(stage.type==='debate'){
     lessonCtx.chatHistory=[{role:'assistant',content:content.opening}];
     body.innerHTML=`<div class="card" style="padding:.75rem 1rem;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center"><span style="font-size:14px">${content.topic}</span><span class="tag tag-coral" style="margin:0">Debate</span></div>
@@ -418,7 +558,7 @@ function renderLessonContent(stage,content,mi,si){
         <button class="btn btn-primary btn-icon" onclick="sendLdDebate(${JSON.stringify(content).replace(/"/g,'&quot;')})">→</button>
       </div>
     </div>
-    <div id="ld-grade-btn" style="display:none;margin-top:.5rem"><button class="btn btn-primary" onclick="gradeLdDebate(${mi},${si})">Avaliar debate →</button></div>
+    <div id="ld-grade-btn" style="display:none;margin-top:.5rem"><button class="btn btn-primary" onclick="gradeLdDebate(${mi},${si})">${t('Avaliar debate →')}</button></div>
     <div id="ld-fb" style="margin-top:1rem"></div>`;
     addLdMsg(content.opening,'ai',true);
     document.getElementById('ld-input').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendLdDebate(content);}});
@@ -429,36 +569,37 @@ function renderLessonContent(stage,content,mi,si){
 function hideReadingText(){document.getElementById('read-phase').style.display='none';document.getElementById('q-phase').style.display='block';}
 
 async function submitReading(content,mi,si){
-  const answers=[...document.querySelectorAll('.cans')].map(t=>t.value.trim());
-  if(answers.some(a=>!a)){alert('Responda as perguntas.');return;}
-  document.getElementById('read-fb').innerHTML='<p style="color:var(--color-text-secondary);font-style:italic">Avaliando...</p>';
+  const answers=[...document.querySelectorAll('.cans')].map(el=>el.value.trim());
+  if(answers.some(a=>!a)){alert(t('Responda todas as perguntas.'));return;}
+  document.getElementById('read-fb').innerHTML=`<p style="color:var(--color-text-secondary);font-style:italic">${t('Avaliando...')}</p>`;
   const storyText=content.story.replace(/<[^>]+>/g,'');
-  const prompt=`A ${state.examResult.level} Brazilian learner of English read an English story (now hidden) and answered comprehension questions IN PORTUGUESE.
+  const L=tutorLang();
+  const prompt=`A ${state.examResult.level} Brazilian learner of English read an English story (now hidden) and answered comprehension questions.
 Story (English): "${storyText}"
-Q1 (PT): ${content.questions[0]} — A1 (PT): "${answers[0]}"
-Q2 (PT): ${content.questions[1]} — A2 (PT): "${answers[1]}"
-Evaluate whether they understood the English. Reference actual story content. Feedback in PORTUGUESE. Be direct.
+Q1: ${content.questions[0]} — A1: "${answers[0]}"
+Q2: ${content.questions[1]} — A2: "${answers[1]}"
+Evaluate whether they understood the English. Reference actual story content. Feedback in ${L}. Be direct.
 Return ONLY JSON: {"fb1":"...","fb2":"..."}`;
   try{
     const raw=await aiCall(prompt,500);
     const fb=extractJSON(raw);
     if(!fb)throw new Error('parse');
-    document.getElementById('read-fb').innerHTML=`<div class="card"><div class="grade-section"><h3>Pergunta 1</h3><p>${fb.fb1}</p></div><div class="grade-section"><h3>Pergunta 2</h3><p>${fb.fb2}</p></div><button class="btn btn-primary" style="margin-top:.75rem" onclick="completeLesson(${mi},${si},20,'leitura')">Próximo estágio →</button></div>`;
-  }catch(e){document.getElementById('read-fb').innerHTML=`<button class="btn btn-primary" onclick="completeLesson(${mi},${si},20,'leitura')">Continuar →</button>`;}
+    document.getElementById('read-fb').innerHTML=`<div class="card"><div class="grade-section"><h3>${t('Pergunta')} 1</h3><p>${fb.fb1}</p></div><div class="grade-section"><h3>${t('Pergunta')} 2</h3><p>${fb.fb2}</p></div><button class="btn btn-primary" style="margin-top:.75rem" onclick="completeLesson(${mi},${si},20,'leitura')">${t('Próximo estágio →')}</button></div>`;
+  }catch(e){document.getElementById('read-fb').innerHTML=`<button class="btn btn-primary" onclick="completeLesson(${mi},${si},20,'leitura')">${t('Continuar →')}</button>`;}
 }
 
 async function submitVocab(content,mi,si){
   const resp=document.getElementById('vocab-resp').value.trim();
-  if(!resp){alert('Escreva sua resposta em inglês.');return;}
-  document.getElementById('vocab-fb').innerHTML='<p style="color:var(--color-text-secondary);font-style:italic">Avaliando...</p>';
+  if(!resp){alert(t('Escreva sua resposta em inglês.'));return;}
+  document.getElementById('vocab-fb').innerHTML=`<p style="color:var(--color-text-secondary);font-style:italic">${t('Avaliando...')}</p>`;
   const words=content.words.map(w=>w.en).join(', ');
-  const prompt=`A ${state.examResult.level} Brazilian learner of English wrote in English using these target words (${words}): "${resp}". Give 2-3 sentences of specific feedback IN PORTUGUESE — which English words used well, natural corrections (show the corrected English), one suggestion. Even broken English is fine; focus on communication. Return ONLY JSON: {"feedback":"..."}`;
+  const prompt=`A ${state.examResult.level} Brazilian learner of English wrote in English using these target words (${words}): "${resp}". Give 2-3 sentences of specific feedback IN ${tutorLang()} — which English words used well, natural corrections (show the corrected English), one suggestion. Even broken English is fine; focus on communication. Return ONLY JSON: {"feedback":"..."}`;
   try{
     const raw=await aiCall(prompt,400);
     const fb=extractJSON(raw);
     if(!fb)throw new Error('parse');
-    document.getElementById('vocab-fb').innerHTML=`<div class="card"><p style="font-size:14px;line-height:1.7">${fb.feedback}</p><button class="btn btn-primary" style="margin-top:.75rem" onclick="completeLesson(${mi},${si},15,'vocabulário')">Próximo estágio →</button></div>`;
-  }catch(e){document.getElementById('vocab-fb').innerHTML=`<button class="btn btn-primary" onclick="completeLesson(${mi},${si},15,'vocabulário')">Continuar →</button>`;}
+    document.getElementById('vocab-fb').innerHTML=`<div class="card"><p style="font-size:14px;line-height:1.7">${fb.feedback}</p><button class="btn btn-primary" style="margin-top:.75rem" onclick="completeLesson(${mi},${si},15,'vocabulário')">${t('Próximo estágio →')}</button></div>`;
+  }catch(e){document.getElementById('vocab-fb').innerHTML=`<button class="btn btn-primary" onclick="completeLesson(${mi},${si},15,'vocabulário')">${t('Continuar →')}</button>`;}
 }
 
 function addLcMsg(text,role,withSpeak=false){
@@ -476,22 +617,23 @@ async function sendLcChat(content){
   try{
     const reply=await aiChat(lessonCtx.chatHistory,`You are ${content.character}. ${content.scenario} Speak ONLY in English, level ${state.examResult.level}-appropriate (clear, simple, natural). 1-3 sentences. Stay in character. Never switch to Portuguese.`);
     loading.remove();addLcMsg(reply,'ai',true);lessonCtx.chatHistory.push({role:'assistant',content:reply});
-  }catch(e){loading.textContent='Erro.';}
+  }catch(e){loading.textContent=t('Erro.');}
 }
 
 async function gradeLcChat(mi,si){
   document.getElementById('lc-grade-btn').style.display='none';
-  document.getElementById('lc-fb').innerHTML='<p style="color:var(--color-text-secondary);font-style:italic">Avaliando...</p>';
+  document.getElementById('lc-fb').innerHTML=`<p style="color:var(--color-text-secondary);font-style:italic">${t('Avaliando...')}</p>`;
   const transcript=lessonCtx.chatHistory.filter(m=>m.role==='user').map(m=>m.content).join('\n');
-  const prompt=`Grade this ${state.examResult.level} Brazilian learner's English conversation. Focus on COMMUNICATION and NATURALNESS over perfect grammar. Be encouraging but specific. Highlight in PORTUGUESE.
-Return ONLY JSON: {"score":"B+","highlight":"highlight in Portuguese","next_focus":"next focus in Portuguese"}\n\nTranscript:\n${transcript}`;
+  const L=tutorLang();
+  const prompt=`Grade this ${state.examResult.level} Brazilian learner's English conversation. Focus on COMMUNICATION and NATURALNESS over perfect grammar. Be encouraging but specific. Highlight in ${L}.
+Return ONLY JSON: {"score":"B+","highlight":"highlight in ${L}","next_focus":"next focus in ${L}"}\n\nTranscript:\n${transcript}`;
   try{
     const raw=await aiCall(prompt,400);
     const g=extractJSON(raw);if(!g)throw new Error('parse');
     const pts={'A+':50,'A':45,'A-':40,'B+':35,'B':30,'B-':25,'C+':20,'C':15,'C-':10,'D':8,'F':5};
     const earned=pts[g.score]||25;
-    document.getElementById('lc-fb').innerHTML=`<div class="card"><div style="font-size:32px;font-weight:500;margin-bottom:4px">${g.score}</div><div class="grade-section"><h3>Destaque</h3><p>${g.highlight}</p></div><div class="grade-section"><h3>Próximo foco</h3><p>${g.next_focus}</p></div><button class="btn btn-primary" style="margin-top:.75rem" onclick="completeLesson(${mi},${si},${earned},'conversa')">Próximo estágio →</button></div>`;
-  }catch(e){document.getElementById('lc-fb').innerHTML=`<button class="btn btn-primary" onclick="completeLesson(${mi},${si},25,'conversa')">Continuar →</button>`;}
+    document.getElementById('lc-fb').innerHTML=`<div class="card"><div style="font-size:32px;font-weight:500;margin-bottom:4px">${g.score}</div><div class="grade-section"><h3>${t('Destaque')}</h3><p>${g.highlight}</p></div><div class="grade-section"><h3>${t('Próximo foco')}</h3><p>${g.next_focus}</p></div><button class="btn btn-primary" style="margin-top:.75rem" onclick="completeLesson(${mi},${si},${earned},'conversa')">${t('Próximo estágio →')}</button></div>`;
+  }catch(e){document.getElementById('lc-fb').innerHTML=`<button class="btn btn-primary" onclick="completeLesson(${mi},${si},25,'conversa')">${t('Continuar →')}</button>`;}
 }
 
 function pickGr(qIdx,val,correct,btn,total){
@@ -500,7 +642,7 @@ function pickGr(qIdx,val,correct,btn,total){
   const isRight=val===correct;
   document.querySelectorAll(`[id^="gp_${qIdx}_"]`).forEach(b=>{b.style.opacity='.4';});
   btn.style.opacity='1';btn.style.background=isRight?'#1d9e75':'#e24b4a';btn.style.color='#fff';btn.style.borderColor=isRight?'#1d9e75':'#e24b4a';
-  document.getElementById('gfb_'+qIdx).textContent=isRight?'✓ Correto':'✗ A resposta correta é: '+correct;
+  document.getElementById('gfb_'+qIdx).textContent=isRight?(state.uiLang==='en'?'✓ Correct':'✓ Correto'):(state.uiLang==='en'?'✗ Correct answer: ':'✗ A resposta correta é: ')+correct;
   document.getElementById('gfb_'+qIdx).style.color=isRight?'#0f6e56':'#a32d2d';
   if(Object.keys(lessonCtx.grammarPicked).length>=total)document.getElementById('gr-next').style.display='block';
 }
@@ -520,21 +662,21 @@ async function sendLdDebate(content){
   try{
     const reply=await aiChat(lessonCtx.chatHistory,`You are debating: "${content.topic}" in ENGLISH only, level ${state.examResult.level}-appropriate. Argue the opposite of the learner. 2-3 sentences. Push back specifically.`);
     loading.remove();addLdMsg(reply,'ai',true);lessonCtx.chatHistory.push({role:'assistant',content:reply});
-  }catch(e){loading.textContent='Erro.';}
+  }catch(e){loading.textContent=t('Erro.');}
 }
 
 async function gradeLdDebate(mi,si){
   document.getElementById('ld-grade-btn').style.display='none';
-  document.getElementById('ld-fb').innerHTML='<p style="color:var(--color-text-secondary);font-style:italic">Avaliando...</p>';
+  document.getElementById('ld-fb').innerHTML=`<p style="color:var(--color-text-secondary);font-style:italic">${t('Avaliando...')}</p>`;
   const transcript=lessonCtx.chatHistory.filter(m=>m.role==='user').map(m=>m.content).join('\n');
-  const prompt=`Grade this ${state.examResult.level} Brazilian learner's English debate. Focus on argumentation, vocabulary, communication (not perfect grammar). Feedback in PORTUGUESE. Return ONLY JSON: {"score":"B+","highlight":"...","next_focus":"..."}\n\nTranscript:\n${transcript}`;
+  const prompt=`Grade this ${state.examResult.level} Brazilian learner's English debate. Focus on argumentation, vocabulary, communication (not perfect grammar). Feedback in ${tutorLang()}. Return ONLY JSON: {"score":"B+","highlight":"...","next_focus":"..."}\n\nTranscript:\n${transcript}`;
   try{
     const raw=await aiCall(prompt,400);
     const g=extractJSON(raw);if(!g)throw new Error('parse');
     const pts={'A+':60,'A':54,'A-':48,'B+':42,'B':36,'B-':30,'C+':24,'C':18,'C-':12,'D':8,'F':5};
     const earned=pts[g.score]||35;
-    document.getElementById('ld-fb').innerHTML=`<div class="card"><div style="font-size:32px;font-weight:500;margin-bottom:4px">${g.score}</div><div class="grade-section"><h3>Destaque</h3><p>${g.highlight}</p></div><div class="grade-section"><h3>Próximo foco</h3><p>${g.next_focus}</p></div><button class="btn btn-primary" style="margin-top:.75rem" onclick="finishMilestoneStage(${mi},${si},${earned},'debate')">Concluir milestone →</button></div>`;
-  }catch(e){document.getElementById('ld-fb').innerHTML=`<button class="btn btn-primary" onclick="finishMilestoneStage(${mi},${si},35,'debate')">Concluir →</button>`;}
+    document.getElementById('ld-fb').innerHTML=`<div class="card"><div style="font-size:32px;font-weight:500;margin-bottom:4px">${g.score}</div><div class="grade-section"><h3>${t('Destaque')}</h3><p>${g.highlight}</p></div><div class="grade-section"><h3>${t('Próximo foco')}</h3><p>${g.next_focus}</p></div><button class="btn btn-primary" style="margin-top:.75rem" onclick="finishMilestoneStage(${mi},${si},${earned},'debate')">${t('Concluir milestone →')}</button></div>`;
+  }catch(e){document.getElementById('ld-fb').innerHTML=`<button class="btn btn-primary" onclick="finishMilestoneStage(${mi},${si},35,'debate')">${t('Continuar →')}</button>`;}
 }
 
 function completeLesson(mi,si,pts,reason){
@@ -561,9 +703,9 @@ function finishMilestone(mi){
   save();
   document.getElementById('lesson-container').innerHTML=`<div style="text-align:center;padding:3rem 1rem">
     <div style="font-size:40px;margin-bottom:1rem">🎉</div>
-    <div style="font-size:20px;font-weight:500;margin-bottom:8px">Milestone concluído!</div>
-    <p style="font-size:14px;color:var(--color-text-secondary);margin-bottom:1.5rem">${mi+1 < state.plan.milestones.length ? 'O próximo milestone está desbloqueado.' : 'Você completou todo o plano!'}</p>
-    <button class="btn btn-primary" onclick="backToRoad()">Ver o plano →</button>
+    <div style="font-size:20px;font-weight:500;margin-bottom:8px">${t('Milestone concluído!')}</div>
+    <p style="font-size:14px;color:var(--color-text-secondary);margin-bottom:1.5rem">${mi+1 < state.plan.milestones.length ? t('O próximo milestone está desbloqueado.') : t('Você completou todo o plano!')}</p>
+    <button class="btn btn-primary" onclick="backToRoad()">${t('Ver o plano →')}</button>
   </div>`;
 }
 
@@ -609,34 +751,34 @@ function startExam(){
 }
 
 function renderEPDots(cur){
-  document.getElementById('phase-dots').innerHTML=['Leitura','Escrita','Gramática'].map((l,i)=>`<span style="font-size:11px;padding:3px 8px;border-radius:20px;background:${i===cur?'var(--color-text-primary)':i<cur?'#e1f5ee':'var(--color-background-secondary)'};color:${i===cur?'#fff':i<cur?'#0f6e56':'var(--color-text-secondary)'}">${l}</span>`).join('');
+  document.getElementById('phase-dots').innerHTML=['Leitura','Escrita','Gramática'].map((l,i)=>`<span style="font-size:11px;padding:3px 8px;border-radius:20px;background:${i===cur?'var(--color-text-primary)':i<cur?'#e1f5ee':'var(--color-background-secondary)'};color:${i===cur?'#fff':i<cur?'#0f6e56':'var(--color-text-secondary)'}">${t(l)}</span>`).join('');
 }
 
 function renderEP(p){
   renderEPDots(p);
   const c=document.getElementById('phase-content'),a=document.getElementById('phase-actions');
   if(p===0){
-    document.getElementById('phase-label').textContent='Fase 1 de 3';
-    document.getElementById('phase-title').textContent='Compreensão de leitura';
-    c.innerHTML=`<p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:.5rem">Leia o texto em inglês e responda as perguntas em português.</p><div class="card" style="background:var(--color-background-secondary);border:none;margin-bottom:1rem"><p style="font-size:15px;line-height:1.9">${EXAM_PASSAGE}</p></div>`+EQ.map((q,i)=>`<div style="margin-bottom:1rem"><div style="font-size:14px;font-weight:500;margin-bottom:6px">${i+1}. ${q}</div><textarea id="eq${i}" rows="2" style="width:100%;border:0.5px solid var(--color-border-tertiary);border-radius:8px;padding:10px;font-size:14px;font-family:inherit;background:var(--color-background-primary);color:#1a1a18" placeholder="Responda em português..."></textarea></div>`).join('');
-    a.innerHTML=`<button class="btn btn-primary" onclick="subEP0()">Próxima fase →</button>`;
+    document.getElementById('phase-label').textContent=t('Fase 1 de 3');
+    document.getElementById('phase-title').textContent=t('Compreensão de leitura');
+    c.innerHTML=`<p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:.5rem">${t('Leia o texto em inglês e responda as perguntas em português.')}</p><div class="card" style="background:var(--color-background-secondary);border:none;margin-bottom:1rem"><p style="font-size:15px;line-height:1.9">${EXAM_PASSAGE}</p></div>`+EQ.map((q,i)=>`<div style="margin-bottom:1rem"><div style="font-size:14px;font-weight:500;margin-bottom:6px">${i+1}. ${q}</div><textarea id="eq${i}" rows="2" style="width:100%;border:0.5px solid var(--color-border-tertiary);border-radius:8px;padding:10px;font-size:14px;font-family:inherit;background:var(--color-background-primary);color:#1a1a18" placeholder="${t('Responda em português...')}"></textarea></div>`).join('');
+    a.innerHTML=`<button class="btn btn-primary" onclick="subEP0()">${t('Próxima fase →')}</button>`;
   }else if(p===1){
-    document.getElementById('phase-label').textContent='Fase 2 de 3';
-    document.getElementById('phase-title').textContent='Escrita livre (em inglês)';
-    c.innerHTML=`<p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:1rem">Escreva em inglês. Tudo bem se for básico — escreva o que conseguir.</p><div style="margin-bottom:1.25rem"><div style="font-size:14px;font-weight:500;margin-bottom:6px">1. Tell me about your daily routine.</div><textarea id="ew1" rows="5" style="width:100%;border:0.5px solid var(--color-border-tertiary);border-radius:8px;padding:10px;font-size:15px;font-family:inherit;background:var(--color-background-primary);color:#1a1a18" placeholder="Write in English..."></textarea></div><div><div style="font-size:14px;font-weight:500;margin-bottom:6px">2. Tell me about your family or your church.</div><textarea id="ew2" rows="5" style="width:100%;border:0.5px solid var(--color-border-tertiary);border-radius:8px;padding:10px;font-size:15px;font-family:inherit;background:var(--color-background-primary);color:#1a1a18" placeholder="Write in English..."></textarea></div>`;
-    a.innerHTML=`<button class="btn btn-primary" onclick="subEP1()">Próxima fase →</button><button class="btn btn-sm" onclick="renderEP(0)">← Voltar</button>`;
+    document.getElementById('phase-label').textContent=t('Fase 2 de 3');
+    document.getElementById('phase-title').textContent=t('Escrita livre (em inglês)');
+    c.innerHTML=`<p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:1rem">${t('Escreva em inglês. Tudo bem se for básico — escreva o que conseguir.')}</p><div style="margin-bottom:1.25rem"><div style="font-size:14px;font-weight:500;margin-bottom:6px">1. Tell me about your daily routine.</div><textarea id="ew1" rows="5" style="width:100%;border:0.5px solid var(--color-border-tertiary);border-radius:8px;padding:10px;font-size:15px;font-family:inherit;background:var(--color-background-primary);color:#1a1a18" placeholder="${t('Write in English...')}"></textarea></div><div><div style="font-size:14px;font-weight:500;margin-bottom:6px">2. Tell me about your family or your church.</div><textarea id="ew2" rows="5" style="width:100%;border:0.5px solid var(--color-border-tertiary);border-radius:8px;padding:10px;font-size:15px;font-family:inherit;background:var(--color-background-primary);color:#1a1a18" placeholder="${t('Write in English...')}"></textarea></div>`;
+    a.innerHTML=`<button class="btn btn-primary" onclick="subEP1()">${t('Próxima fase →')}</button><button class="btn btn-sm" onclick="renderEP(0)">${t('← Voltar')}</button>`;
   }else if(p===2){
-    document.getElementById('phase-label').textContent='Fase 3 de 3';
-    document.getElementById('phase-title').textContent='Consciência gramatical';
-    c.innerHTML=`<p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:1rem">Escolha a opção correta em inglês.</p>`+GI.map((item,i)=>`<div style="margin-bottom:1.25rem"><div style="font-size:14px;margin-bottom:8px">${i+1}. ${item.p}</div><div style="display:flex;gap:6px;flex-wrap:wrap">${item.o.map(o=>`<button class="btn btn-sm" id="ep_${i}_${o.replace(/[\s']/g,'_')}" onclick="pickEG(${i},'${o.replace(/'/g,"\\'")}',this)">${o}</button>`).join('')}</div></div>`).join('');
-    a.innerHTML=`<button class="btn btn-primary" onclick="subEP2()">Ver resultado →</button><button class="btn btn-sm" onclick="renderEP(1)">← Voltar</button>`;
+    document.getElementById('phase-label').textContent=t('Fase 3 de 3');
+    document.getElementById('phase-title').textContent=t('Consciência gramatical');
+    c.innerHTML=`<p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:1rem">${t('Escolha a opção correta em inglês.')}</p>`+GI.map((item,i)=>`<div style="margin-bottom:1.25rem"><div style="font-size:14px;margin-bottom:8px">${i+1}. ${item.p}</div><div style="display:flex;gap:6px;flex-wrap:wrap">${item.o.map(o=>`<button class="btn btn-sm" id="ep_${i}_${o.replace(/[\s']/g,'_')}" onclick="pickEG(${i},'${o.replace(/'/g,"\\'")}',this)">${o}</button>`).join('')}</div></div>`).join('');
+    a.innerHTML=`<button class="btn btn-primary" onclick="subEP2()">${t('Ver resultado →')}</button><button class="btn btn-sm" onclick="renderEP(1)">${t('← Voltar')}</button>`;
   }
 }
 
-function subEP0(){const ans=EQ.map((_,i)=>document.getElementById('eq'+i).value.trim());if(ans.some(a=>!a)){alert('Responda todas as perguntas.');return;}ea.comp=ans;renderEP(1);}
-function subEP1(){const w1=document.getElementById('ew1').value.trim(),w2=document.getElementById('ew2').value.trim();if(!w1||!w2){alert('Escreva as duas respostas (mesmo que seja inglês básico).');return;}ea.writing=[w1,w2];renderEP(2);}
+function subEP0(){const ans=EQ.map((_,i)=>document.getElementById('eq'+i).value.trim());if(ans.some(a=>!a)){alert(t('Responda todas as perguntas.'));return;}ea.comp=ans;renderEP(1);}
+function subEP1(){const w1=document.getElementById('ew1').value.trim(),w2=document.getElementById('ew2').value.trim();if(!w1||!w2){alert(t('Escreva as duas respostas (mesmo que seja inglês básico).'));return;}ea.writing=[w1,w2];renderEP(2);}
 function pickEG(idx,val,btn){egp[idx]=val;document.querySelectorAll(`[id^="ep_${idx}_"]`).forEach(b=>{b.style.background='';b.style.color='';b.style.borderColor='';});btn.style.background='var(--color-text-primary)';btn.style.color='#fff';btn.style.borderColor='var(--color-text-primary)';}
-function subEP2(){if(Object.keys(egp).length<GI.length){alert('Responda todos os itens.');return;}ea.grammar=GI.map((item,i)=>({s:egp[i],c:item.a}));const score=ea.grammar.filter(g=>g.s===g.c).length;runExam(score);}
+function subEP2(){if(Object.keys(egp).length<GI.length){alert(t('Responda todos os itens.'));return;}ea.grammar=GI.map((item,i)=>({s:egp[i],c:item.a}));const score=ea.grammar.filter(g=>g.s===g.c).length;runExam(score);}
 
 async function runExam(gs){
   document.getElementById('exam-phase-panel').style.display='none';
@@ -646,7 +788,7 @@ async function runExam(gs){
 READING (passage in English, answers in Portuguese — measure COMPREHENSION of the English text): Q1:"${ea.comp[0]}" Q2:"${ea.comp[1]}" Q3:"${ea.comp[2]}"
 WRITING (in English — even broken English is fine; rate level, not perfection): "${ea.writing[0]}" / "${ea.writing[1]}"
 GRAMMAR (English fill-in): ${gs}/10 correct\n${gd}
-Return ONLY JSON. The description and notes must be in PORTUGUESE: {"level":"A2","label":"Elementary","description":"2-3 sentence plain Portuguese summary.","comprehension_note":"1 sentence in Portuguese","writing_note":"1 sentence in Portuguese","grammar_note":"1 sentence in Portuguese with the score"}`;
+Return ONLY JSON. The description and notes must be in ${tutorLang()}: {"level":"A2","label":"Elementary","description":"2-3 sentence plain ${tutorLang()} summary.","comprehension_note":"1 sentence","writing_note":"1 sentence","grammar_note":"1 sentence with the score"}`;
   try{
     const raw=await aiCall(prompt,800);
     const r=extractJSON(raw);if(!r)throw new Error('parse');
@@ -655,10 +797,11 @@ Return ONLY JSON. The description and notes must be in PORTUGUESE: {"level":"A2"
     document.getElementById('result-level').textContent=r.level;
     document.getElementById('result-label').textContent=r.label;
     document.getElementById('result-desc').textContent=r.description;
-    document.getElementById('result-breakdown').innerHTML=[{label:'Leitura',note:r.comprehension_note},{label:'Escrita',note:r.writing_note},{label:'Gramática',note:r.grammar_note}].map(s=>`<div style="background:var(--color-background-secondary);border-radius:8px;padding:10px"><div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-secondary);margin-bottom:4px">${s.label}</div><div style="font-size:13px;line-height:1.5">${s.note}</div></div>`).join('');
-    state.examResult={level:r.level,label:r.label,desc:r.description,date:new Date().toLocaleDateString('pt-BR')};
+    document.getElementById('result-breakdown').innerHTML=[{label:'Leitura',note:r.comprehension_note},{label:'Escrita',note:r.writing_note},{label:'Gramática',note:r.grammar_note}].map(s=>`<div style="background:var(--color-background-secondary);border-radius:8px;padding:10px"><div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-secondary);margin-bottom:4px">${t(s.label)}</div><div style="font-size:13px;line-height:1.5">${s.note}</div></div>`).join('');
+    state.examResult={level:r.level,label:r.label,desc:r.description,date:new Date().toLocaleDateString(state.uiLang==='en'?'en-US':'pt-BR')};
     state.plan=null;state.stagesDone={};state.currentMilestoneIdx=0;
     addPoints(25);save();updateLevelWidget();
+    checkLanguageThreshold();applyI18n();
   }catch(e){document.getElementById('exam-grading-panel').innerHTML=`<p style="color:#e24b4a;text-align:center">Erro. <button class="btn btn-sm" onclick="runExam(${gs})">Tentar novamente</button></p>`;}
 }
 
@@ -702,8 +845,9 @@ async function expGenStory(){
   document.getElementById('exp-reading').style.display='block';
   document.getElementById('exp-read-phase').style.display='block';
   document.getElementById('exp-after-read').style.display='none';
-  document.getElementById('exp-story-text').textContent='Gerando...';
-  const prompt=`Generate a ~150 word English story (A2-B1 level) for a Brazilian learner. Context: Brazilian church / market / bus / family in Rondônia, possibly meeting an American or using English. Include 4 vocab words wrapped as: <span class="word-tip"><span class="tapped" onclick="saveWord('en','pt','english-context')">en</span><span class="tooltip">pt</span></span>. Return ONLY JSON: {"title":"English title","context":"Portuguese context line","character":"Name","scenario":"English scenario","text":"English story with the wrapped vocab spans"}`;
+  document.getElementById('exp-story-text').textContent=t('Gerando...');
+  const ctxL=state.uiLang==='en'?'English':'Portuguese';
+  const prompt=`Generate a ~150 word English story (A2-B1 level) for a Brazilian learner. Context: Brazilian church / market / bus / family in Rondônia, possibly meeting an American or using English. Include 4 vocab words wrapped as: <span class="word-tip"><span class="tapped" onclick="saveWord('en','pt','english-context')">en</span><span class="tooltip">pt</span></span>. Return ONLY JSON: {"title":"English title","context":"${ctxL} context line","character":"Name","scenario":"English scenario","text":"English story with the wrapped vocab spans"}`;
   try{
     const raw=await aiCall(prompt,1000);
     const s=extractJSON(raw);if(!s)throw new Error('parse');
@@ -713,7 +857,7 @@ async function expGenStory(){
     document.getElementById('exp-story-ctx').textContent=s.context;
     if(!state.storiesRead.includes('gen')){state.storiesRead.push('gen');addPoints(10);}
     bindTooltips();
-  }catch(e){document.getElementById('exp-story-text').textContent='Erro. Tente novamente.';}
+  }catch(e){document.getElementById('exp-story-text').textContent=t('Erro. Tente novamente.');}
 }
 
 function expBackToStoryList(){document.getElementById('exp-story-list').style.display='block';document.getElementById('exp-reading').style.display='none';document.getElementById('exp-chat').style.display='none';}
@@ -745,7 +889,7 @@ async function expSendChat(){
   try{
     const reply=await aiChat(state.expChatHistory,`You are ${state.expChatStory.character}. ${state.expChatStory.scenario} ENGLISH only, clear and simple (A2-B1). 1-3 sentences. Never use Portuguese.`);
     loading.remove();addExpMsg(reply,'ai',true);state.expChatHistory.push({role:'assistant',content:reply});
-  }catch(e){loading.textContent='Erro.';}
+  }catch(e){loading.textContent=t('Erro.');}
 }
 
 function setExpTopic(t){document.getElementById('exp-debate-topic').value=t;}
@@ -761,7 +905,7 @@ async function expStartDebate(){
   try{
     const reply=await aiChat([{role:"user",content:"What is your position on: "+topic+"?"}],`You are debating "${topic}" in ENGLISH only. Take a strong position. Invite the learner to respond. 2-3 sentences. Clear, level-appropriate (A2-B1) English.`);
     loading.remove();addExpDebateMsg(reply,'ai',true);state.expDebateHistory.push({role:'user',content:"What is your position?"},{role:'assistant',content:reply});
-  }catch(e){loading.textContent='Erro.';}
+  }catch(e){loading.textContent=t('Erro.');}
   document.getElementById('exp-debate-input').onkeydown=function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();expSendDebate();}};
 }
 
@@ -780,7 +924,7 @@ async function expSendDebate(){
     loading.remove();
     addExpDebateMsg(reply,'ai',true);
     state.expDebateHistory.push({role:'assistant',content:reply});
-  }catch(e){loading.textContent='Erro.';}
+  }catch(e){loading.textContent=t('Erro.');}
 }
 
 async function expStartTopic(key,name){
@@ -791,9 +935,9 @@ async function expStartTopic(key,name){
   document.getElementById('exp-topic-msgs').innerHTML='';
   const loading=document.createElement('div');loading.className='explore-msg tutor loading';loading.textContent='...';document.getElementById('exp-topic-msgs').appendChild(loading);
   try{
-    const reply=await aiChat([{role:'user',content:'Comece a explicação agora, por favor.'}],TOPIC_PROMPTS[key],600);
+    const reply=await aiChat([{role:'user',content:'Comece a explicação agora, por favor.'}],topicPrompt(key),600);
     loading.remove();addExpTopicMsg(reply,'tutor');state.expTopicHistory.push({role:'assistant',content:reply});
-  }catch(e){loading.textContent='Erro.';}
+  }catch(e){loading.textContent=t('Erro.');}
 }
 
 async function expSendTopic(){
@@ -801,9 +945,9 @@ async function expSendTopic(){
   addExpTopicMsg(text,'me');state.expTopicHistory.push({role:'user',content:text});
   const loading=document.createElement('div');loading.className='explore-msg tutor loading';loading.textContent='...';document.getElementById('exp-topic-msgs').appendChild(loading);
   try{
-    const reply=await aiChat(state.expTopicHistory,TOPIC_PROMPTS[state.expCurrentTopic],600);
+    const reply=await aiChat(state.expTopicHistory,topicPrompt(state.expCurrentTopic),600);
     loading.remove();addExpTopicMsg(reply,'tutor');state.expTopicHistory.push({role:'assistant',content:reply});
-  }catch(e){loading.textContent='Erro.';}
+  }catch(e){loading.textContent=t('Erro.');}
 }
 
 function addExpTopicMsg(text,role){
@@ -816,7 +960,7 @@ function resetExpTopics(){document.getElementById('exp-topic-grid').style.displa
 function renderExpVocab(){
   const el=document.getElementById('exp-vocab-list');
   if(!el)return;
-  if(!state.savedWords.length){el.innerHTML='<p style="color:var(--color-text-secondary);font-size:14px">Nenhuma palavra salva. Toque nas palavras destacadas durante a leitura.</p>';return;}
+  if(!state.savedWords.length){el.innerHTML=`<p style="color:var(--color-text-secondary);font-size:14px">${t('Nenhuma palavra salva. Toque nas palavras destacadas durante a leitura.')}</p>`;return;}
   el.innerHTML=state.savedWords.map(w=>`<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><div><div style="font-size:15px;font-weight:500">${w.en}</div><div style="font-size:12px;color:var(--color-text-secondary);margin-top:1px">"${w.ctx}"</div></div><div style="font-size:13px;color:var(--color-text-secondary)">${w.pt}</div></div>`).join('');
 }
 
@@ -859,5 +1003,7 @@ window.setExpTopic=setExpTopic;window.expStartDebate=expStartDebate;
 window.expSendDebate=expSendDebate;window.expStartTopic=expStartTopic;
 window.expSendTopic=expSendTopic;window.resetExpTopics=resetExpTopics;
 window.saveWord=saveWord;window.state=state;
+window.toggleUiLang=toggleUiLang;window.applyI18n=applyI18n;
+window.renderPlano=renderPlano;window.updateLevelWidget=updateLevelWidget;
 
 loadState();
