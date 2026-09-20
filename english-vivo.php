@@ -2,13 +2,13 @@
 /**
  * Plugin Name: English Vivo
  * Description: AI-powered English learning app for Brazilian Portuguese speakers. Sister app to Português Vivo. Renders via [english_vivo] shortcode.
- * Version: 1.1.0
+ * Version: 1.1.1
  * Author: Mike Schmidt / Anthropic
  */
 
 defined('ABSPATH') || exit;
 
-define('EV_VERSION', '1.1.0');
+define('EV_VERSION', '1.1.1');
 define('EV_URL', plugin_dir_url(__FILE__));
 
 add_action('wp_enqueue_scripts', function () {

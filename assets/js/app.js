@@ -309,24 +309,30 @@ function renderPlano(){
   renderRoad();
 }
 
-function aiCall(prompt,maxTokens=1000){
-  return fetch("https://api.groq.com/openai/v1/chat/completions",{
-    method:"POST",
-    headers:{"Content-Type":"application/json","Authorization":"Bearer "+(state.apiKey||'')},
-    body:JSON.stringify({model:"llama-3.3-70b-versatile",max_tokens:maxTokens,messages:[{role:"user",content:prompt}]})
-  }).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
-    .then(d=>d.choices[0].message.content);
-}
-
-function aiChat(messages,system,maxTokens=300){
-  const body={model:"llama-3.3-70b-versatile",max_tokens:maxTokens,messages};
-  if(system)body.messages=[{role:"system",content:system},...messages];
-  return fetch("https://api.groq.com/openai/v1/chat/completions",{
+async function _groqPost(body){
+  const r=await fetch("https://api.groq.com/openai/v1/chat/completions",{
     method:"POST",
     headers:{"Content-Type":"application/json","Authorization":"Bearer "+(state.apiKey||'')},
     body:JSON.stringify(body)
-  }).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
-    .then(d=>d.choices[0].message.content);
+  });
+  if(!r.ok){
+    let errText='';
+    try{errText=await r.text();}catch(_){}
+    const short=errText.substring(0,300);
+    throw new Error('Groq HTTP '+r.status+(short?' — '+short:''));
+  }
+  const d=await r.json();
+  if(!d.choices||!d.choices[0]||!d.choices[0].message)throw new Error('Groq returned no message. Body: '+JSON.stringify(d).substring(0,200));
+  return d.choices[0].message.content;
+}
+
+function aiCall(prompt,maxTokens=1000){
+  return _groqPost({model:"llama-3.3-70b-versatile",max_tokens:maxTokens,messages:[{role:"user",content:prompt}]});
+}
+
+function aiChat(messages,system,maxTokens=300){
+  const msgs=system?[{role:"system",content:system},...messages]:messages;
+  return _groqPost({model:"llama-3.3-70b-versatile",max_tokens:maxTokens,messages:msgs});
 }
 
 function buildFallbackPlan(lvl,nextLvl,themes){
@@ -494,9 +500,12 @@ Return ONLY JSON: {"topic":"Debate topic in English","opening":"AI's opening arg
   try{
     const raw=await aiCall(prompt,1500);
     const content=extractJSON(raw);
-    if(!content)throw new Error('parse');
+    if(!content)throw new Error('AI response was not valid JSON. Raw: '+(raw||'').substring(0,200));
     renderLessonContent(stage,content,mi,si);
-  }catch(e){document.getElementById('lesson-body').innerHTML=`<p style="color:#e24b4a">${t('Erro ao gerar conteúdo.')}</p><button class="btn btn-sm" style="margin-top:.75rem" onclick="generateLessonContent(state.plan.milestones[${mi}].stages[${si}],${mi},${si})">${t('Tentar novamente')}</button>`;}
+  }catch(e){
+    const detail=(e&&e.message)?e.message:String(e);
+    document.getElementById('lesson-body').innerHTML=`<p style="color:#e24b4a">${t('Erro ao gerar conteúdo.')}</p><div style="font-size:12px;color:var(--color-text-secondary);background:var(--color-background-secondary);padding:8px;border-radius:6px;margin:8px 0;word-break:break-word">${detail.replace(/</g,'&lt;')}</div><button class="btn btn-sm" style="margin-top:.75rem" onclick="generateLessonContent(state.plan.milestones[${mi}].stages[${si}],${mi},${si})">${t('Tentar novamente')}</button>`;
+  }
 }
 
 function renderLessonContent(stage,content,mi,si){
